@@ -1,5 +1,5 @@
 export type FundProgram = {
-    "address": "FXvCybtDJeNSAKGAQhBujXQWp3ab61ReP84EFpyYFe4r",
+    "address": "6vUjvBGWETdE4duVqQBeu4WLCC3XgDkCmzhx4aCC7V4g",
     "metadata": {
       "name": "fund",
       "version": "0.1.0",
@@ -657,7 +657,7 @@ export type FundProgram = {
   
 
 export const IDL = {
-    "address": "FXvCybtDJeNSAKGAQhBujXQWp3ab61ReP84EFpyYFe4r",
+    "address": "6vUjvBGWETdE4duVqQBeu4WLCC3XgDkCmzhx4aCC7V4g",
     "metadata": {
       "name": "fund",
       "version": "0.1.0",

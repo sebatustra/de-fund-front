@@ -5,15 +5,16 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import * as anchor from "@coral-xyz/anchor"
 import * as web3 from "@solana/web3.js";
 import * as token from "@solana/spl-token"
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react"
-import { IDL, FundProgram } from "../../../idl";
+import { FundProgram } from "../../../idl";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Label } from "@/components/ui/label"
+import { ReloadIcon } from "@radix-ui/react-icons";
 
 interface FundAccount {
     manager: anchor.web3.PublicKey;
@@ -25,11 +26,17 @@ interface FundAccount {
 }
 
 export default function Fund({
-    usdcMint
+    usdcMint,
+    fundPDA,
+    setFundPDA,
+    program
 }: {
-    usdcMint: string | undefined
+    usdcMint: string | undefined,
+    fundPDA: string | undefined,
+    setFundPDA: Function,
+    program: anchor.Program<FundProgram> | undefined
 }) {
-    const [program, setProgram] = useState<anchor.Program<FundProgram>>();
+    // const [program, setProgram] = useState<anchor.Program<FundProgram>>();
     const { connection } = useConnection();
     const wallet = useAnchorWallet();
     const {sendTransaction } = useWallet();
@@ -40,23 +47,7 @@ export default function Fund({
     const [fundAccount, setFundAccount] = useState<FundAccount>();
     const [fundUsdcBalance, setFundUsdcBalance] = useState(0);
 
-    const [fundPDA, setFundPDA] = useState<string>();
-
-    useEffect(() => {
-        if (wallet) {
-            let provider: anchor.Provider
-            try {
-                provider = anchor.getProvider()
-            } catch {
-                provider = new anchor.AnchorProvider(connection, wallet, {})
-    
-                anchor.setProvider(provider)
-            }
-
-            const program = new anchor.Program(IDL as FundProgram);
-            setProgram(program)
-        }
-    }, [wallet, connection]);
+    const [isLoading, setIsLoading] = useState(false);
 
     const initializeFund = async () => {
         if (program && wallet && usdcMint) {
@@ -74,17 +65,18 @@ export default function Fund({
                         new anchor.BN(initialShares)
                     )
                     .accounts({
-                        manager: wallet.publicKey
+                        manager: wallet.publicKey,
                     })
                     .instruction();
 
                 const initializeFundUdscVault = await program.methods
                     .initializeUsdcVault()
                     .accounts({
-                        usdcMint: usdcMint,
+                        usdcMint: new web3.PublicKey(usdcMint),
                         manager: wallet.publicKey
                     })
                     .instruction();
+
 
                 transaction.add(initializeFundInstruction);
                 transaction.add(initializeFundUdscVault)
@@ -93,27 +85,34 @@ export default function Fund({
 
                 console.log("sig for initializeFund: ", sig);
 
+                // const fundAccount = await program.account
+                //     .fundAccount
+                //     .fetch(fundPda);
+                
+                // setFundAccount(fundAccount);
+
+
+                // const [usdcVauldPDA] = web3.PublicKey.findProgramAddressSync(
+                //     [Buffer.from("fund_usdc_vault")],
+                //     program.programId
+                // );
+                
+                // const usdcBalance = await connection.getTokenAccountBalance(usdcVauldPDA)
+
+                // console.log("usdcBalance", usdcBalance.value.amount);
+
+                // const fundUsdcVault = await token.getAccount(
+                //     connection,
+                //     usdcVauldPDA
+                // );
+
+                // console.log("fundUsdcVault", fundUsdcVault)
+
+
+                // setFundUsdcBalance(Number(fundUsdcVault.amount))
+                
                 setFundPDA(fundPda.toString())
 
-                const fundAccount = await program.account
-                    .fundAccount
-                    .fetch(fundPda);
-
-                setFundAccount(fundAccount);
-
-                const [usdcVauldPDA] = web3.PublicKey.findProgramAddressSync(
-                    [Buffer.from("fund_usdc_vault")],
-                    program.programId
-                );
-            
-
-                const fundUsdcVault = await token.getAccount(
-                    connection,
-                    usdcVauldPDA
-                );
-
-                setFundUsdcBalance(Number(fundUsdcVault.amount))
- 
             } catch(error) {
                 console.error(error)
             }
@@ -122,6 +121,7 @@ export default function Fund({
 
     const updateFundData = async () => {
         if (program && fundPDA) {
+            setIsLoading(true)
             try {
                 const fundPdaPubkey = new web3.PublicKey(fundPDA)
                 const fundAccount = await program.account
@@ -142,8 +142,10 @@ export default function Fund({
                 );
 
                 setFundUsdcBalance(Number(fundUsdcVault.amount))
+                setIsLoading(false)
             } catch(error) {
                 console.error(error)
+                setIsLoading(false)
             }
         }
     }
@@ -170,6 +172,12 @@ export default function Fund({
                             disabled
                         />
 
+                        <Label>Valor cuota</Label>
+                        <Input
+                            value={Number(fundAccount?.totalValue) / Number(fundAccount?.totalShares)}
+                            disabled
+                        />
+
                         <Label>Saldo cuenta USDC</Label>
                         <Input
                             value={fundUsdcBalance}
@@ -178,9 +186,15 @@ export default function Fund({
 
                         <Button
                             onClick={() => updateFundData()}
+                            disabled={isLoading}
                         >
-                            Actualizar datos
+                            {isLoading ? (
+                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                "Actualizar datos"
+                            )}
                         </Button>
+                            
                     </div>
                 ) : (
                     <div className="flex flex-col space-y-2">
@@ -200,8 +214,13 @@ export default function Fund({
 
                         <Button
                             onClick={() => initializeFund()}
+                            disabled={isLoading}
                         >
-                            Inicializar
+                            {isLoading ? (
+                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                "Crear el fondo"
+                            )}
                         </Button>
                     </div>
 

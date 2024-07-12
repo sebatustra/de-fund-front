@@ -9,11 +9,15 @@ require("@solana/wallet-adapter-react-ui/styles.css");
 
 
 const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
-    const endpoint = "https://devnet.helius-rpc.com/?api-key=301961ea-ae60-4242-98eb-512e084a81b6";
+    let endpoint = process.env.NEXT_PUBLIC_HELIUS_URL;
+
+    if (!endpoint) {
+        endpoint = clusterApiUrl("devnet")
+    }
     const wallets = useMemo(() => [], []);
   
     return (
-        <ConnectionProvider endpoint={endpoint}>
+        <ConnectionProvider endpoint={endpoint} config={{commitment: "finalized"}}>
             <WalletProvider wallets={wallets}>
                 <WalletModalProvider>
                     {children}

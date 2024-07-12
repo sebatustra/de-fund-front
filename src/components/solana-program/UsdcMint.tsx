@@ -11,6 +11,7 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { ReloadIcon } from "@radix-ui/react-icons";
 
 export default function UsdcMint({
     setUsdcMint,
@@ -24,10 +25,13 @@ export default function UsdcMint({
     const {sendTransaction, publicKey} = useWallet();
 
     const [receiver, setReceiver] = useState<string>();
-    const [usdcAmount, setUsdcAmount] = useState<number>()
+    const [usdcAmount, setUsdcAmount] = useState<number>();
+
+    const [isLoading, setIsLoading] = useState(false);
 
     const initializeUsdcMint = async () => {
         if (publicKey) {
+            setIsLoading(true)
             try {
                 const mintKeypair = web3.Keypair.generate();
                 const transaction = new web3.Transaction();
@@ -47,15 +51,19 @@ export default function UsdcMint({
                     publicKey,
                     null
                 );
+
                 transaction.add(createAccountInstruction);
                 transaction.add(usdcMintInstruction);
 
                 await sendTransaction(transaction, connection, { signers: [mintKeypair] });
 
                 setUsdcMint(mintKeypair.publicKey.toString())
+
+                setIsLoading(false)
     
             } catch(error: any) {
                 console.error(error.message)
+                setIsLoading(false)
             }
         }
     }
@@ -126,15 +134,26 @@ export default function UsdcMint({
                         <Button 
                             className="w-full"
                             onClick={() => transferUsdc()}
+                            disabled={isLoading}
                         >
-                            Transferir USDC
+                            
+                            {isLoading ? (
+                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                            ): (
+                                "Transferir USDC"
+                            )}
                         </Button>
                     </div>
                 ) : (
                     <Button 
                         className="w-full"
                         onClick={() => initializeUsdcMint()}
-                    >Crea el mint</Button>
+                        disabled={isLoading}
+                    >{isLoading ? (
+                        <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                    ): (
+                        "crear mint"
+                    )}</Button>
                 )}
             </CardContent>
         </Card>
